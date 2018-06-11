@@ -1,7 +1,7 @@
 /*
   ppInvertMatrix
 
-  written by Podoroges 11/06/2016
+  written by Podoroges 11/06/2018
 
   Invert Square Matrix
 
