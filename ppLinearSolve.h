@@ -123,6 +123,8 @@ class ppLinearSolve{
     for(int i=0;i<pSize;i++)
     for(int j=0;j<pSize;j++)
       M[i][j] = 0;
+    for(int i=0;i<pSize;i++)
+      V[i] = 0;
   }
 
   ppLinearSolve(){
