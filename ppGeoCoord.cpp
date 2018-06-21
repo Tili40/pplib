@@ -149,10 +149,24 @@ void ppGeoCoord::fromSK42bl(double lat,double lon){
   pLon = lon + dL(lat, lon, 0) / 3600.0;
 }
 
+// Input from SK42bl DMS
+void ppGeoCoord::fromSK42bl(int lat_d,int lat_m,int lat_s,int south,int lon_d,int lon_m,int lon_s,int west){
+  double lat = (south?-1:1)*dms2flo(lat_d,lat_m,lat_s);
+  double lon = (west?-1:1)*dms2flo(lon_d,lon_m,lon_s);
+  pLat = lat + dB(lat, lon, 0) / 3600.0;
+  pLon = lon + dL(lat, lon, 0) / 3600.0;
+}
+
 // Input from WGS84
 void ppGeoCoord::fromWGS84(double lat,double lon){
   pLat = lat;
   pLon = lon;
+}
+
+// Input from WGS84 DMS
+void ppGeoCoord::fromWGS84(int lat_d,int lat_m,int lat_s,int south,int lon_d,int lon_m,int lon_s,int west){
+  pLat = (south?-1:1)*dms2flo(lat_d,lat_m,lat_s);
+  pLon = (west?-1:1)*dms2flo(lon_d,lon_m,lon_s);
 }
 
 // Output to WGS84
@@ -161,11 +175,29 @@ void ppGeoCoord::toWGS84(double *lat,double *lon){
   *lon = pLon;
 }
 
+// Output to WGS84 DMS
+void ppGeoCoord::toWGS84(int *lat_d,int *lat_m,int *lat_s,int *south,int *lon_d,int *lon_m,int *lon_s,int *west){
+  flo2dms(pLat,lat_d,lat_m,lat_s);
+  flo2dms(pLon,lon_d,lon_m,lon_s);
+  *south = (pLat<0);
+  *west = (pLon<0);
+}
+
+
 // Output to SK42 Lat/Lon
 void ppGeoCoord::toSK42bl(double *lat,double *lon){
   d2 p = fromWGS84ToSK42bl(d2(pLat,pLon));
   *lat = p.d1;
   *lon = p.d2;
+}
+
+// Output to SK42 Lat/Lon DMS
+void ppGeoCoord::toSK42bl(int *lat_d,int *lat_m,int *lat_s,int *south,int *lon_d,int *lon_m,int *lon_s,int *west){
+  d2 p = fromWGS84ToSK42bl(d2(pLat,pLon));
+  flo2dms(p.d1,lat_d,lat_m,lat_s);
+  flo2dms(p.d2,lon_d,lon_m,lon_s);
+  *south = (p.d1<0);
+  *west = (p.d2<0);
 }
 
 // Output to GenStab
@@ -175,6 +207,19 @@ void ppGeoCoord::toSK42xy(double *x,double *y){
   *x = p.d1;
   *y = p.d2;
 }
+
+// Double to DMS conversion
+void ppGeoCoord::flo2dms(double f,int *d,int *m,int *s){
+  *d=floor(fabs(f));
+  *m=floor(((fabs(f))- *d)*60);
+  *s=floor(((((fabs(f))- *d)*60)- *m)*60);
+}
+
+// DMS to double conversion
+double ppGeoCoord::dms2flo(int d,int m,int s){
+  return double(d)+(double(m)+double(s)/60.0)/60.0;
+}
+
 
 #ifdef USE_STD_STRING
 
