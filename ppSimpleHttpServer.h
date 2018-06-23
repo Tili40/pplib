@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpServer v1.0
+  class ppSimpleHttpServer v1.1
 
   by Podoroges
   Kiev, Ukraine
 
+  23/06/2018 v1.1 SimpleFileResponse added
   21/06/2018 v1.0 Initial release
 
 
@@ -27,11 +28,15 @@ class CServer: public ppSimpleHttpServer{
     FMain->MLog->Lines->Add(st);
   }
   void HandleHTTPRequest(CSocketInfo * SocketInfo){
-    if(SocketInfo->Url.Pos("/test/")==1){
-      SocketInfo->Output = SimpleHTTPResponse("<html><body><h1>Test</h1><i>"+SocketInfo->Url+"</i></body></html>");
+    if(SocketInfo->Url.Pos("/1.gif")==1){
+      SocketInfo->SimpleFileResponse("C:\\TestServer\\1.GIF");
       return;
     }
-    SocketInfo->Output = SimpleHTTPResponse("<html><body><h1>404</h1><i>"+SocketInfo->Url+"</i></body></html>");
+    if(SocketInfo->Url.Pos("/test/")==1){
+      SocketInfo->SimpleHtmlResponse("<html><body><h1>Test</h1><i>"+SocketInfo->Url+"</i></body></html>");
+      return;
+    }
+    SocketInfo->SimpleHtmlResponse("<html><body><h1>Test</h1><img src='1.gif'><i>"+SocketInfo->Url+"</i></body></html>");
   }
 };
   4. .cpp file, form events:
@@ -72,9 +77,11 @@ class ppSimpleHttpServer{
     SOCKET Socket;
     int Writable;
     AnsiString Input;
-    AnsiString Output;
+    TStream * Output;
     AnsiString Url;
     AnsiString Method;
+    void SimpleHtmlResponse(AnsiString);
+    void SimpleFileResponse(AnsiString);
     CSocketInfo(SOCKET s);
     ~CSocketInfo();
   };
@@ -88,7 +95,6 @@ class ppSimpleHttpServer{
   public:
   int Port;
   virtual void Log(AnsiString) = 0;
-  AnsiString SimpleHTTPResponse(AnsiString);
   virtual void HandleHTTPRequest(CSocketInfo * SocketInfo) = 0;
   void ParseHTTPHeader(CSocketInfo * SocketInfo);
   void HandleMessage(int Event,int Socket);
