@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpServer v1.1
+  class ppSimpleHttpServer v1.2
 
   by Podoroges
   Kiev, Ukraine
 
+  25/06/2018 v1.2 x-www-form-urlencoded and UrlDecode added
   23/06/2018 v1.1 SimpleFileResponse added
   21/06/2018 v1.0 Initial release
 
@@ -80,6 +81,10 @@ class ppSimpleHttpServer{
     TStream * Output;
     AnsiString Url;
     AnsiString Method;
+    AnsiString ContentType;
+    AnsiString UnparsedParams;
+    TStringList * Params;
+    int ContentLength;
     void SimpleHtmlResponse(AnsiString);
     void SimpleFileResponse(AnsiString);
     CSocketInfo(SOCKET s);

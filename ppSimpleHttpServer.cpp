@@ -3,17 +3,67 @@
 #pragma link "ws2_32.lib"
 #pragma comment(lib, "ws2_32.lib")
 
+
+
+//---------------------------------------------------------------------------
+//  ExtractString1("archive1.zip","arc",".zip") = "hive1"
+AnsiString ExtractString1(AnsiString source,AnsiString start,AnsiString end){
+  if(!source.Pos(start))return "";
+  source = source.Delete(1,source.Pos(start)+start.Length()-1);
+  if(!source.Pos(end))return source;
+  source = source.Delete(source.Pos(end),source.Length());
+  return source;
+}
+//---------------------------------------------------------------------------
+// Replace in "st" all "from" to "to" (BCC version, copyright Never)
+AnsiString StrRep(AnsiString st,AnsiString from,AnsiString to){
+  while(st.Pos(from)){
+    int a = st.Pos(from);
+    st.Delete(a,from.Length());
+    st.Insert(to,a);
+  }
+  return st;
+}
+//---------------------------------------------------------------------------
+/*
+  And the answer is rather boring: you just do it. That's all.
+  application/x/www-form-urlencoded only does two things:
+  replace spaces with "+" signs, and replace most other kind of punctuation
+  (including the real "+" sign itself) with %xx,
+  where xx is the octet in hexadecimal.
+  https://stackoverflow.com/questions/27525002/un-escape-string-received-via-post-data
+*/
+void UrlDecode(AnsiString &st){
+  for(int a=1;a<=st.Length();a++){
+    if(st[a]=='+')
+      st[a] = ' ';
+    if((st[a]=='%')&&(a<st.Length()-1)){
+      char buf[3];
+      buf[0] = st[a+1];
+      buf[1] = st[a+2];
+      buf[2] = 0;
+      st[a] = strtol(buf, NULL, 16);
+      st = st.Delete(a+1,2);
+    }
+  }
+}
+
+
 // CSocketInfo
 
 ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
   Socket = s;
   Writable = 0;
-  BufferSize = 50; // 1024
+  ContentLength = 0;
+  BufferSize = 0x400; // 1024
   Buffer = new char[BufferSize];
   Output = NULL;
+  Params = new TStringList();
 }
 
 ppSimpleHttpServer::CSocketInfo::~CSocketInfo(){
+  delete Output;
+  delete Params;
   closesocket(Socket);
   delete [] Buffer;
 }
@@ -49,6 +99,8 @@ void ppSimpleHttpServer::CSocketInfo::SimpleFileResponse(AnsiString fname){
   str->Add((AnsiString)"Content-Length: "+fs->Size);
   if(ExtractFileExt(fname).LowerCase()==AnsiString(".gif"))
     str->Add("Content-Type: image/gif");
+  if(ExtractFileExt(fname).LowerCase()==AnsiString(".html"))
+    str->Add("Content-Type: text/html");
   //todo content types
   str->Add("Connection: Closed");
   str->Add("");
@@ -83,10 +135,41 @@ void ppSimpleHttpServer::ParseHTTPHeader(CSocketInfo * SocketInfo){
     int posSpace = SocketInfo->Input.Pos(" ")+1;
     int posHttp = SocketInfo->Input.Pos(" HTTP");
     SocketInfo->Url = SocketInfo->Input.SubString(posSpace,posHttp-posSpace);
-    HandleHTTPRequest(SocketInfo);
-    if(SocketInfo->Output)
-      PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_WRITE);
-    SocketInfo->Input = "";
+    int thinkFinish = 1;
+
+    if(SocketInfo->Input.Pos("Content-Length:")){
+      SocketInfo->ContentLength = ExtractString1(SocketInfo->Input,"Content-Length:","\r\n").Trim().ToIntDef(0);
+      if(SocketInfo->Input.Pos("Content-Type:"))
+        SocketInfo->ContentType = ExtractString1(SocketInfo->Input,"Content-Type:","\r\n").Trim();
+      int HeaderLength = SocketInfo->Input.Pos("\r\n\r\n")+3;//+4-1
+      int TotalLength = SocketInfo->Input.Length();
+      Log((AnsiString)"*** ContentLength="+SocketInfo->ContentLength);
+      Log((AnsiString)"*** HeaderLength="+HeaderLength);
+      Log((AnsiString)"*** TotalLength="+TotalLength);
+
+      if(TotalLength<SocketInfo->ContentLength+HeaderLength){
+        Log((AnsiString)"*** Waiting.");
+        thinkFinish = 0;
+      }
+    }
+
+    if(thinkFinish){
+      Log("*** Handling HTTP request.");
+      //Content-Type:
+      if(SocketInfo->ContentType==AnsiString("application/x-www-form-urlencoded")){
+        // Parse params
+        SocketInfo->UnparsedParams = SocketInfo->Input.SubString(SocketInfo->Input.Pos("\r\n\r\n")+4,SocketInfo->ContentLength);
+        UrlDecode(SocketInfo->UnparsedParams);
+        SocketInfo->Params->Text = StrRep(SocketInfo->UnparsedParams,"&","\r\n");
+        Log((AnsiString)"Unparsed: ["+SocketInfo->UnparsedParams+"]");
+        for(int a=0;a<SocketInfo->Params->Count;a++)
+          Log((AnsiString)SocketInfo->Params->Names[a]+": ["+SocketInfo->Params->Values[SocketInfo->Params->Names[a]]+"]");
+      }
+      HandleHTTPRequest(SocketInfo); // Calling virtual function
+      if(SocketInfo->Output)
+        PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_WRITE);
+      SocketInfo->Input = "";
+    }
   }
 }
 
@@ -144,8 +227,12 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
         PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_WRITE);
       }
       else{
+        //FreeSocketInfo(SocketInfo->Socket);
+        // todo: check
+        /*closesocket(SocketInfo->Socket);
         delete SocketInfo->Output;
-        SocketInfo->Output = NULL;
+        SocketInfo->Output = NULL;  */
+        PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_CLOSE);
       }
 
 
