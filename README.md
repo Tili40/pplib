@@ -12,3 +12,5 @@ ppLinearSolve - SSolve System of Linear Equations
 ppSimpleHttpClient - Yes we are trying to write our own Firefox
 
 ppSimpleHttpServer - Writing our own Apache
+
+ppStr - Simple string utilites
