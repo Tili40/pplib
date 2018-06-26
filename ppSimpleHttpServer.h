@@ -1,13 +1,13 @@
 /*
-  class ppSimpleHttpServer v1.2
+  class ppSimpleHttpServer v1.3
 
   by Podoroges
   Kiev, Ukraine
 
+  26/06/2018 v1.3 application/octet-stream added
   25/06/2018 v1.2 x-www-form-urlencoded and UrlDecode added
   23/06/2018 v1.1 SimpleFileResponse added
   21/06/2018 v1.0 Initial release
-
 
   Usage example:
   1. Put into Form.h, somewhere on top:

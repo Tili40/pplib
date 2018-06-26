@@ -97,10 +97,14 @@ void ppSimpleHttpServer::CSocketInfo::SimpleFileResponse(AnsiString fname){
   TFileStream * fs = new TFileStream(fname,fmOpenRead|fmShareDenyNone);
   str->Add("HTTP/1.1 200 OK");
   str->Add((AnsiString)"Content-Length: "+fs->Size);
+  // Unknown file type: application/octet-stream
+  // http://www.rfc-editor.org/rfc/rfc2046.txt
+  AnsiString ContentType = "application/octet-stream";
   if(ExtractFileExt(fname).LowerCase()==AnsiString(".gif"))
-    str->Add("Content-Type: image/gif");
+    ContentType = "image/gif";
   if(ExtractFileExt(fname).LowerCase()==AnsiString(".html"))
-    str->Add("Content-Type: text/html");
+    ContentType = "text/html";
+  str->Add((AnsiString)"Content-Type: "+ContentType);
   //todo content types
   str->Add("Connection: Closed");
   str->Add("");
