@@ -47,39 +47,113 @@ void UrlDecode(AnsiString &st){
     }
   }
 }
-
-
-// CSocketInfo
-
+//---------------------------------------------------------------------------
+// We are looking for pattern with length patlen in buf with length buflen
+// starting from start. Returning first occurence, or -1 if not found
+int memsearch(char * buf,int buflen,int start,char * pattern,int patlen){
+  int found;
+  for(int a=start;a<buflen-patlen+1;a++){
+    found = 1;
+    int b=0;
+    while(b<patlen){
+      if(buf[a+b]!=pattern[b]){
+        found = 0;
+        b = patlen;
+      }
+      b++;
+    }
+    if(found)
+      return a;
+  }
+  return -1;
+}
+//---------------------------------------------------------------------------
+//  ppSimpleHttpServer::CSocketInfo
+//---------------------------------------------------------------------------
 ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
   Socket = s;
   Writable = 0;
   ContentLength = 0;
-  BufferSize = 0x400; // 1024
+  //BufferSize = 0x400; // 1024
+  BufferSize = 1000000;
   Buffer = new char[BufferSize];
+  RawInput = new TMemoryStream();
   Output = NULL;
   Params = new TStringList();
 }
-
+//---------------------------------------------------------------------------
 ppSimpleHttpServer::CSocketInfo::~CSocketInfo(){
+  delete RawInput;
   delete Output;
   delete Params;
   closesocket(Socket);
   delete [] Buffer;
 }
-
-
+//---------------------------------------------------------------------------
+AnsiString ppSimpleHttpServer::CSocketInfo::ParseMultipartFormData(int mode,AnsiString fieldname,AnsiString filename){
+  // Universal routine for both ExtractFormFileName and ExtractFormFileAs
+  AnsiString result = "";
+  int size = RawInput->Size;
+  char * buf = (char *)malloc(size);
+  RawInput->Position = 0;
+  RawInput->Read(buf,size);
+  AnsiString boundary;
+  if(ContentType.Pos("boundary="))
+    boundary = ContentType.SubString(ContentType.Pos("boundary=")+9,ContentType.Length());
+  if(boundary.Length()){
+    // The encapsulation boundary is defined as a line consisting entirely of two hyphen
+    // characters ("-", decimal code 45) followed by the boundary parameter value from the Content-Type header field.
+    // https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+    boundary = (AnsiString)"--"+boundary;
+    int p1;
+    int p2 = -1;
+    do{
+      p1 = p2;
+      p2 = memsearch(buf,size,(p2<0?0:p2+boundary.Length()),boundary.c_str(),boundary.Length());
+      if((p1>=0)&&(p2>=0)){
+        // Between p1 and p2 file candidate is located
+        int p3 = memsearch(buf,size,p1,"\r\n\r\n",4);
+        AnsiString st = AnsiString(buf+p1,p3-p1);
+        AnsiString field = ExtractString1(st," name=\"","\"");
+        if(field==fieldname){
+          if(mode==1){
+            result = ExtractString1(st,"filename=\"","\"");
+          }
+          if(mode==2){
+            TFileStream * fs = new TFileStream(filename,fmCreate);
+            fs->Write(buf+p3+4,p2-p3-6);// 6 = 2xCRLF+CRLF
+            delete fs;
+          }
+        }
+      }
+    }
+    while(p2>=0);
+  }
+  free(buf);
+  return result;
+}
+//---------------------------------------------------------------------------
+AnsiString ppSimpleHttpServer::CSocketInfo::ExtractFormFileName(AnsiString f1){
+  return ParseMultipartFormData(1,f1,"");
+}
+//---------------------------------------------------------------------------
+void ppSimpleHttpServer::CSocketInfo::ExtractFormFileAs(AnsiString f1,AnsiString fname){
+  ParseMultipartFormData(2,f1,fname);
+}
+//---------------------------------------------------------------------------
 ppSimpleHttpServer::CSocketInfo * ppSimpleHttpServer::GetSocketInfo(SOCKET s){
   for(unsigned int a=0;a<Sockets.size();a++)
     if(Sockets[a]->Socket==s)
       return Sockets[a];
   return NULL;
 }
-
+//---------------------------------------------------------------------------
+//  ppSimpleHttpServer
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::CreateSocketInfo(SOCKET s){
   Sockets.push_back(new CSocketInfo(s));
 }
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::FreeSocketInfo(SOCKET s){
   int Found = -1;
   for(unsigned int a=0;a<Sockets.size();a++)
@@ -90,8 +164,7 @@ void ppSimpleHttpServer::FreeSocketInfo(SOCKET s){
     Sockets.erase(Sockets.begin()+Found);
   }
 }
-
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::CSocketInfo::SimpleFileResponse(AnsiString fname){
   TStringList * str = new TStringList();
   TFileStream * fs = new TFileStream(fname,fmOpenRead|fmShareDenyNone);
@@ -115,8 +188,7 @@ void ppSimpleHttpServer::CSocketInfo::SimpleFileResponse(AnsiString fname){
   Output->Position = 0;
   delete str;
 }
-
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::CSocketInfo::SimpleHtmlResponse(AnsiString Content){
   TStringList * str = new TStringList();
   str->Add("HTTP/1.1 200 OK");
@@ -129,10 +201,7 @@ void ppSimpleHttpServer::CSocketInfo::SimpleHtmlResponse(AnsiString Content){
   Output->Position = 0;
   delete str;
 }
-
-
-
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::ParseHTTPHeader(CSocketInfo * SocketInfo){
   if((SocketInfo->Input.Pos("\r\n\r\n"))&&(SocketInfo->Input.Pos(" HTTP"))){
     SocketInfo->Method = SocketInfo->Input.SubString(1,SocketInfo->Input.Pos(" ")-1);
@@ -143,8 +212,10 @@ void ppSimpleHttpServer::ParseHTTPHeader(CSocketInfo * SocketInfo){
 
     if(SocketInfo->Input.Pos("Content-Length:")){
       SocketInfo->ContentLength = ExtractString1(SocketInfo->Input,"Content-Length:","\r\n").Trim().ToIntDef(0);
-      if(SocketInfo->Input.Pos("Content-Type:"))
+      if(SocketInfo->Input.Pos("Content-Type:")){
         SocketInfo->ContentType = ExtractString1(SocketInfo->Input,"Content-Type:","\r\n").Trim();
+        Log("*** Content-Type:["+SocketInfo->ContentType+"]");
+      }
       int HeaderLength = SocketInfo->Input.Pos("\r\n\r\n")+3;//+4-1
       int TotalLength = SocketInfo->Input.Length();
       Log((AnsiString)"*** ContentLength="+SocketInfo->ContentLength);
@@ -176,7 +247,7 @@ void ppSimpleHttpServer::ParseHTTPHeader(CSocketInfo * SocketInfo){
     }
   }
 }
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
   if(WSAGETSELECTERROR(Event)){
     Log((AnsiString)"Socket failed with error "+WSAGETSELECTERROR(Event));
@@ -208,6 +279,7 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
       }
     }
     SocketInfo->Input = SocketInfo->Input+AnsiString(SocketInfo->Buffer,RecvBytes);
+    SocketInfo->RawInput->Write(SocketInfo->Buffer,RecvBytes);
     Log((AnsiString)"RECV: "+RecvBytes+" "+AnsiString(SocketInfo->Buffer,RecvBytes));
     ParseHTTPHeader(SocketInfo);
   }
@@ -251,8 +323,7 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
     FreeSocketInfo(Socket);
   }
 }
-
-
+//---------------------------------------------------------------------------
 void ppSimpleHttpServer::StartServer(){
   WSADATA wsaData;
   SOCKADDR_IN InternetAddr;
@@ -276,12 +347,13 @@ void ppSimpleHttpServer::StartServer(){
   }
   Log((AnsiString)"Server started on port "+Port);
 }
+//---------------------------------------------------------------------------
 ppSimpleHttpServer::ppSimpleHttpServer(int port,HWND hwnd,int wmsg){
   Port = port;
   hWnd = hwnd;
   wMsg = wmsg;
 }
-
+//---------------------------------------------------------------------------
 ppSimpleHttpServer::~ppSimpleHttpServer(){
   for(unsigned int a=0;a<Sockets.size();a++)
     delete Sockets[a];
@@ -289,6 +361,7 @@ ppSimpleHttpServer::~ppSimpleHttpServer(){
   closesocket(Listen);
   WSACleanup();
 }
+//---------------------------------------------------------------------------
 
 
 
