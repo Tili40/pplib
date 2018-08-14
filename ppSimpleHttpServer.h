@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpServer v1.4
+  class ppSimpleHttpServer v1.5
 
   by Podoroges
   Kiev, Ukraine
 
+  14/08/2018 v1.5 CSocketInfo::ClientIP added
   13/08/2018 v1.4 ExtractFormFileName and ExtractFormFileAs added
   26/06/2018 v1.3 application/octet-stream added
   25/06/2018 v1.2 x-www-form-urlencoded and UrlDecode added
@@ -83,6 +84,7 @@ class ppSimpleHttpServer{
     ~CSocketInfo();
     AnsiString ParseMultipartFormData(int,AnsiString,AnsiString);
     public:
+    AnsiString ClientIP;
     TStream * RawInput;
     AnsiString Input;
     TStream * Output;

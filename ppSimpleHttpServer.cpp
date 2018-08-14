@@ -4,7 +4,6 @@
 #pragma comment(lib, "ws2_32.lib")
 
 
-
 //---------------------------------------------------------------------------
 //  ExtractString1("archive1.zip","arc",".zip") = "hive1"
 AnsiString ExtractString1(AnsiString source,AnsiString start,AnsiString end){
@@ -74,12 +73,23 @@ ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
   Socket = s;
   Writable = 0;
   ContentLength = 0;
-  //BufferSize = 0x400; // 1024
-  BufferSize = 1000000;
+  BufferSize = 0x400; // 1024
+  //BufferSize = 1000000;
   Buffer = new char[BufferSize];
   RawInput = new TMemoryStream();
   Output = NULL;
   Params = new TStringList();
+  // Get Client IP
+  // http://wiredrevolution.com/c/find-ip-address-from-remote-end-of-a-tcp-socket
+
+
+int len;
+struct sockaddr_in sin;
+len = sizeof(sin);
+
+  if (getpeername(s, (struct sockaddr *) &sin, &len)==0){
+    ClientIP = AnsiString(inet_ntoa(sin.sin_addr));
+  }
 }
 //---------------------------------------------------------------------------
 ppSimpleHttpServer::CSocketInfo::~CSocketInfo(){
@@ -261,7 +271,7 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
       return;
     }
     CreateSocketInfo(Accept);
-    Log((AnsiString)"New connection: "+Accept);
+    Log((AnsiString)"New connection: "+Accept+" IP:"+GetSocketInfo(Accept)->ClientIP);
     WSAAsyncSelect(Accept, hWnd, wMsg, FD_READ|FD_WRITE|FD_CLOSE);
   }
 
