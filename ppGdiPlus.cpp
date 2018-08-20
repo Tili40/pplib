@@ -48,11 +48,16 @@ void FillRoundRectangle(Gdiplus::Graphics* g, Gdiplus::Brush *p, Gdiplus::Rect& 
 
 */
 
+int ppGdiPlus::pInstanceCounter = 0;
+
 // Two variables required for startup
 Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 ULONG_PTR  gdiplusToken;
 
-Gdiplus::Bitmap * pbmp; // Internal bitmap
+
+Gdiplus::Bitmap * pbmp(void * p){
+  return (Gdiplus::Bitmap *)p;
+}
 
 void * ppGdiPlus::GetInternalBitmap(){
   return (void *)pbmp;
@@ -63,22 +68,28 @@ void * ppGdiPlus::GetInternalBitmap(){
 ppGdiPlus::ppGdiPlus(int Width,int Height){
   pWidth = Width;
   pHeight = Height;
-  GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-  pbmp = new Gdiplus::Bitmap(pWidth,pHeight);
+  if(pInstanceCounter<1){
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+  }
+  _pbmp = (void *)Gdiplus::new Gdiplus::Bitmap(pWidth,pHeight);
   pPenColor = clBlack;
   pPenWidth = 1;
   FontSize = 10;
   pAlpha = 0;
+  pInstanceCounter++;
 }
 // Destructor
 ppGdiPlus::~ppGdiPlus(){
-  delete pbmp;
-  Gdiplus::GdiplusShutdown(gdiplusToken);
+  Gdiplus::delete pbmp(_pbmp);
+  pInstanceCounter--;
+  if(pInstanceCounter<1){
+    Gdiplus::GdiplusShutdown(gdiplusToken);
+  }
 }
 // Resize
 void ppGdiPlus::pResize(){
-  delete pbmp;
-  pbmp = new Gdiplus::Bitmap(pWidth,pHeight);
+  Gdiplus::delete pbmp(_pbmp);
+  _pbmp = (void*)Gdiplus::new Gdiplus::Bitmap(pWidth,pHeight);
 }
 void ppGdiPlus::Resize(int w,int h){
   pWidth = w;
@@ -136,7 +147,7 @@ void __fastcall ppGdiPlus::pSetFontSize(int s){
 
 // Line
 void ppGdiPlus::Line(int x1,int y1,int x2,int y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   Gdiplus::Pen pen(Gdiplus::Color(GetRValue(pPenColor), GetGValue(pPenColor), GetBValue(pPenColor)),(float)pPenWidth);
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   g.DrawLine(&pen, x1, y1, x2, y2);
@@ -144,76 +155,76 @@ void ppGdiPlus::Line(int x1,int y1,int x2,int y2){
 // Draw
 void ppGdiPlus::Draw(TCanvas * c,int x,int y){
   Gdiplus::Graphics g2(c->Handle);
-  g2.DrawImage(pbmp,x,y);
+  g2.DrawImage(pbmp(_pbmp),x,y);
 }
 // Clear
 void ppGdiPlus::Clear(TColor c){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.Clear(Gdiplus::Color(GetRValue(c), GetGValue(c), GetBValue(c)));
 }
 // Rect
 void ppGdiPlus::Rect(int x1,int y1,int x2,int y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   Gdiplus::Pen pen(Gdiplus::Color(GetRValue(pPenColor), GetGValue(pPenColor), GetBValue(pPenColor)),pPenWidth);
   g.DrawRectangle(&pen, x1, y1, x2-x1, y2-y1);
 }
 // FillRect
 void ppGdiPlus::FillRect(int x1,int y1,int x2,int y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   Gdiplus::SolidBrush brush(Gdiplus::Color(pAlpha,GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
 //  Gdiplus::SolidBrush brush(Gdiplus::Color(GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
   g.FillRectangle(&brush, x1, y1, x2-x1, y2-y1);
 }
 // DrawEllipse
 void ppGdiPlus::DrawEllipse(int x1,int y1,int x2,int y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   Gdiplus::Pen pen(Gdiplus::Color(GetRValue(pPenColor), GetGValue(pPenColor), GetBValue(pPenColor)),pPenWidth);
   g.DrawEllipse(&pen, x1, y1, x2-x1, y2-y1);
 }
 // FillEllipse
 void ppGdiPlus::FillEllipse(int x1,int y1,int x2,int y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   Gdiplus::SolidBrush brush(Gdiplus::Color(GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
   g.FillEllipse(&brush, x1, y1, x2-x1, x2-x1);
 }
 // DrawCircle
 void ppGdiPlus::DrawCircle(double x1,double y1,double r){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   Gdiplus::Pen pen(Gdiplus::Color(GetRValue(pPenColor), GetGValue(pPenColor), GetBValue(pPenColor)),pPenWidth);
   g.DrawEllipse(&pen, float(x1-r), float(y1-r), float(2*r), float(2*r));
 }
 // FillCircle
 void ppGdiPlus::FillCircle(double x1,double y1,double r){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   Gdiplus::SolidBrush brush(Gdiplus::Color(pAlpha,GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
   g.FillEllipse(&brush, float(x1-r), float(y1-r), float(2*r), float(2*r));
 }
 // Polyline
 void ppGdiPlus::Polyline(TPoint * p,int cnt){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   Gdiplus::Pen pen(Gdiplus::Color(GetRValue(pPenColor), GetGValue(pPenColor), GetBValue(pPenColor)),pPenWidth);
   g.DrawPolygon(&pen, (Gdiplus::Point*)p ,cnt);
 }
 // Polygon
 void ppGdiPlus::Polygon(TPoint * p,int cnt){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
   Gdiplus::SolidBrush brush(Gdiplus::Color(pAlpha,GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
   g.FillPolygon(&brush, (Gdiplus::Point*)p ,cnt);
 }
 // DrawImage
 void ppGdiPlus::DrawImage(void * image,float x1,float y1,float x2,float y2){
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   g.DrawImage((Gdiplus::Bitmap *)image,x1,y1,x2,y2);
 }
 // TextOut
 void ppGdiPlus::TextOut(double x,double y,AnsiString st){
   WideString wst = WideString(st);
-  Gdiplus::Graphics g(pbmp);
+  Gdiplus::Graphics g(pbmp(_pbmp));
   Gdiplus::SolidBrush brush(Gdiplus::Color(pAlpha,GetRValue(pBrushColor), GetGValue(pBrushColor), GetBValue(pBrushColor)));
   Gdiplus::Font font(&Gdiplus::FontFamily(L"Arial"), pFontSize);
   Gdiplus::PointF p(x,y);

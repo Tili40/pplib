@@ -1,5 +1,7 @@
 /*
   ppGdiPlus - GdiPlus wrapper for BCB 6.0 by Podoroges
+  v0.06 20/08/2018 - Added pInstanceCounter to allow several instances at once
+                     pbmp included into class ppGdiPlus
   v0.05 22/06/2018 - Added GetInternalBitmap
   v0.04 12/06/2018 - Added TextOut, FontSize
   v0.03 23/05/2018 - Added DrawCircle, FillCircle, Alpha
@@ -15,6 +17,8 @@
 
 class ppGdiPlus{
 private:
+  void * _pbmp; // Internal bitmap
+  static int pInstanceCounter;
   int pWidth;
   int __fastcall pGetWidth();
   void __fastcall pSetWidth(int);
