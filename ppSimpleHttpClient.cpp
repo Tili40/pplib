@@ -3,6 +3,30 @@
 #include "ppSimpleHttpClient.h"
 #pragma link "ws2_32.lib"
 #pragma comment(lib, "ws2_32.lib")
+
+//---------------------------------------------------------------------------
+// unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+// https://tools.ietf.org/html/rfc3986
+void UrlEncode(AnsiString &st){
+  AnsiString result;
+  for(int a=1;a<=st.Length();a++){
+    int unreserved = 0;
+    unsigned char c = st[a];
+    if((c>=48)&&(c<=57)) // 0..9
+      unreserved = 1;
+    if((c>=65)&&(c<=90)) // A-Z
+      unreserved = 1;
+    if((c>=97)&&(c<=122))// a-z
+      unreserved = 1;
+    if((c=='-')||(c=='.')||(c=='_')||(c=='~'))
+      unreserved = 1;
+    if(!unreserved){
+      st[a] = '%';
+      st.Insert(AnsiString().sprintf("%02X",c),a+1);
+      a = a+2;
+    }
+  }
+}
 //---------------------------------------------------------------------------
 //  ExtractString1("archive1.zip","arc",".zip") = "hive1"
 AnsiString ppSimpleHttpClient::ExtractString1(AnsiString source,AnsiString start,AnsiString end){
@@ -28,6 +52,27 @@ __fastcall ppSimpleHttpClient::~ppSimpleHttpClient(){
 void ppSimpleHttpClient::Get(AnsiString url){
   Url = url;
   Method = "GET";
+  Resume();
+}
+//---------------------------------------------------------------------------
+void ppSimpleHttpClient::PostSimpleForm(AnsiString url,AnsiString fields){
+  Url = url;
+  Method = "POST";
+  ContentType = "application/x-www-form-urlencoded";
+  AnsiString result;
+  TStringList * str = new TStringList();
+  str->Text = fields;
+  for(int a=0;a<str->Count;a++){
+    AnsiString f = str->Names[a];
+    AnsiString v = str->Values[f];
+    UrlEncode(f);
+    UrlEncode(v);
+    if(a>0)
+      result = (AnsiString)result+"&";
+    result = (AnsiString)result+f+"="+v;
+  }
+  delete str;
+  Content = new TStringStream(result);
   Resume();
 }
 //---------------------------------------------------------------------------

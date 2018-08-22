@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpClient v1.1
+  class ppSimpleHttpClient v1.2
 
   by Podoroges
   Kiev, Ukraine
 
+  22/08/2018 v1.2 PostSimpleForm and UrlEncode added
   14/08/2018 v1.1 PostSingleFile added
   24/06/2018 v1.0 Initial release
 
@@ -55,6 +56,7 @@ class ppSimpleHttpClient:public TThread{
 
   void Get(AnsiString);
   void PostSingleFile(AnsiString,AnsiString,AnsiString);
+  void PostSimpleForm(AnsiString,AnsiString);
 
   virtual void __fastcall DownloadReady() = 0;
   virtual void __fastcall SyncroLog() = 0;
