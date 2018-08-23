@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpServer v1.5
+  class ppSimpleHttpServer v1.6
 
   by Podoroges
   Kiev, Ukraine
 
+  23/08/2018 v1.6 AllDoneNowMayClose added to reflect FD_CLOSE
   14/08/2018 v1.5 CSocketInfo::ClientIP added
   13/08/2018 v1.4 ExtractFormFileName and ExtractFormFileAs added
   26/06/2018 v1.3 application/octet-stream added
@@ -93,6 +94,7 @@ class ppSimpleHttpServer{
     AnsiString ContentType;
     AnsiString UnparsedParams;
     TStringList * Params;
+    int AllDoneNowMayClose;
     int ContentLength;
     void SimpleHtmlResponse(AnsiString);
     void SimpleFileResponse(AnsiString);

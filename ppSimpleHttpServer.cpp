@@ -73,6 +73,7 @@ ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
   Socket = s;
   Writable = 0;
   ContentLength = 0;
+  AllDoneNowMayClose = 0;
   BufferSize = 0x400; // 1024
   //BufferSize = 1000000;
   Buffer = new char[BufferSize];
@@ -277,6 +278,10 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
 
   if(WSAGETSELECTEVENT(Event)==FD_READ){
     CSocketInfo * SocketInfo = GetSocketInfo(Socket);
+    if(!SocketInfo){
+      Log("Closed socket on FD_READ");
+      return;
+    }
     SocketInfo->DataBuf.buf = SocketInfo->Buffer;
     SocketInfo->DataBuf.len = SocketInfo->BufferSize;
     DWORD Flags = 0;
@@ -296,6 +301,10 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
   if(WSAGETSELECTEVENT(Event)==FD_WRITE){
     DWORD SendBytes;
     CSocketInfo * SocketInfo = GetSocketInfo(Socket);
+    if(!SocketInfo){
+      Log("Closed socket on FD_WRITE");
+      return;
+    }
     if(SocketInfo->Output){
       Log((AnsiString)"SocketInfo->Output->Size: "+SocketInfo->Output->Size+" Pos:"+SocketInfo->Output->Position);
       SocketInfo->DataBuf.len = std::min(SocketInfo->Output->Size-SocketInfo->Output->Position,SocketInfo->BufferSize);
@@ -318,6 +327,7 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
         /*closesocket(SocketInfo->Socket);
         delete SocketInfo->Output;
         SocketInfo->Output = NULL;  */
+        SocketInfo->AllDoneNowMayClose = 1;
         PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_CLOSE);
       }
 
@@ -329,8 +339,18 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
   }
 
   if(WSAGETSELECTEVENT(Event)==FD_CLOSE){
-    Log((AnsiString)"Closing socket "+Socket);
-    FreeSocketInfo(Socket);
+    CSocketInfo * SocketInfo = GetSocketInfo(Socket);
+    if(!SocketInfo){
+      Log("Already closed socket on FD_CLOSE");
+      return;
+    }
+    if(SocketInfo->AllDoneNowMayClose){
+      Log((AnsiString)"Closing socket "+Socket);
+      FreeSocketInfo(Socket);
+    }
+    else{
+      Log((AnsiString)"FD_CLOSE received for socket "+Socket);
+    }
   }
 }
 //---------------------------------------------------------------------------
