@@ -1,9 +1,10 @@
 /*
-  class ppSimpleHttpClient v1.2
+  class ppSimpleHttpClient v1.3
 
   by Podoroges
   Kiev, Ukraine
 
+  23/08/2018 v1.3 Removed forgotten debug code
   22/08/2018 v1.2 PostSimpleForm and UrlEncode added
   14/08/2018 v1.1 PostSingleFile added
   24/06/2018 v1.0 Initial release

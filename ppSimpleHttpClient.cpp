@@ -200,11 +200,11 @@ void __fastcall ppSimpleHttpClient::Execute(){
       char * HttpRequestBuf = (char *)malloc(HttpRequestLength);
       RequestStream->Position = 0;
       RequestStream->Read(HttpRequestBuf,HttpRequestLength);
-      //
+      /*
       TFileStream * fs = new TFileStream("C:\\TestWebClient\\_RequestStream",fmCreate);
       fs->CopyFrom(RequestStream,0);
       delete fs;
-      //
+      */
       delete RequestStream;
 
       if(send( Socket, HttpRequestBuf, HttpRequestLength, 0 )== SOCKET_ERROR)
