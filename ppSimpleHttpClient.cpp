@@ -201,11 +201,6 @@ void __fastcall ppSimpleHttpClient::Execute(){
       char * HttpRequestBuf = (char *)malloc(HttpRequestLength);
       RequestStream->Position = 0;
       RequestStream->Read(HttpRequestBuf,HttpRequestLength);
-      /*
-      TFileStream * fs = new TFileStream("C:\\TestWebClient\\_RequestStream",fmCreate);
-      fs->CopyFrom(RequestStream,0);
-      delete fs;
-      */
       delete RequestStream;
 
       if(send( Socket, HttpRequestBuf, HttpRequestLength, 0 )== SOCKET_ERROR)
@@ -234,6 +229,8 @@ void __fastcall ppSimpleHttpClient::Execute(){
             ParseHTTPHeaders(ms);
           if((HeadersParsed)&&(ContentLength>0)){
             ProgressPercent = 100*(ms->Size-ContentStart)/ContentLength;
+            if(ms->Size-ContentStart==ContentLength)
+              ProgressPercent = 100;
             Synchronize(Progress);
           }
 
@@ -261,7 +258,6 @@ void __fastcall ppSimpleHttpClient::Execute(){
       }
       else{
         // Cannot find headers, take all stream
-
         Output->CopyFrom(ms,0);
       }
       delete ms;
@@ -282,7 +278,7 @@ void ppSimpleHttpClient::ParseHTTPHeaders(TStream * ms){
     Headers = ss->DataString.SubString(1,ss->DataString.Pos("\r\n\r\n")).Trim();
     ContentType = ExtractString1(Headers,"Content-Type:","\r\n").Trim();
     ContentLength = ExtractString1(Headers,"Content-Length:","\r\n").Trim().ToIntDef(0);
-    int ContentStart = ss->DataString.Pos("\r\n\r\n")+3; //+4-1
+    ContentStart = ss->DataString.Pos("\r\n\r\n")+3; //+4-1
     Log((AnsiString)"ContentType "+ContentType);
     Log((AnsiString)"ContentLength "+ContentLength);
     HeadersParsed = 1;
