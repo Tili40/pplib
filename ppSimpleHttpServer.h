@@ -1,9 +1,12 @@
 /*
-  class ppSimpleHttpServer v1.6
+  class ppSimpleHttpServer v1.7
 
   by Podoroges
   Kiev, Ukraine
 
+TODO: https://developer.mozilla.org/en-US/docs/Web/HTTP/Session
+
+  27/08/2018 v1.7 Proper WSAEWOULDBLOCK handling
   23/08/2018 v1.6 AllDoneNowMayClose added to reflect FD_CLOSE
   14/08/2018 v1.5 CSocketInfo::ClientIP added
   13/08/2018 v1.4 ExtractFormFileName and ExtractFormFileAs added

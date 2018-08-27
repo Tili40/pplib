@@ -74,20 +74,16 @@ ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
   Writable = 0;
   ContentLength = 0;
   AllDoneNowMayClose = 0;
-  BufferSize = 0x400; // 1024
-  //BufferSize = 1000000;
+  //BufferSize = 0x400; // 1024
+  BufferSize = 100000;
   Buffer = new char[BufferSize];
   RawInput = new TMemoryStream();
   Output = NULL;
   Params = new TStringList();
   // Get Client IP
   // http://wiredrevolution.com/c/find-ip-address-from-remote-end-of-a-tcp-socket
-
-
-int len;
-struct sockaddr_in sin;
-len = sizeof(sin);
-
+  struct sockaddr_in sin;
+  int len = sizeof(sin);
   if (getpeername(s, (struct sockaddr *) &sin, &len)==0){
     ClientIP = AnsiString(inet_ntoa(sin.sin_addr));
   }
@@ -305,14 +301,20 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
       Log("Closed socket on FD_WRITE");
       return;
     }
-    if(SocketInfo->Output){
-      Log((AnsiString)"SocketInfo->Output->Size: "+SocketInfo->Output->Size+" Pos:"+SocketInfo->Output->Position);
-      SocketInfo->DataBuf.len = std::min(SocketInfo->Output->Size-SocketInfo->Output->Position,SocketInfo->BufferSize);
-      SocketInfo->Output->ReadBuffer(SocketInfo->DataBuf.buf,SocketInfo->DataBuf.len);
+    if((SocketInfo->Output)&&(!SocketInfo->AllDoneNowMayClose)){
+      //Log((AnsiString)"SocketInfo->Output->Size: "+SocketInfo->Output->Size+" Pos:"+SocketInfo->Output->Position);
+      int ChunkSize = std::min(SocketInfo->Output->Size-SocketInfo->Output->Position,SocketInfo->BufferSize);
+      SocketInfo->DataBuf.len = ChunkSize;
+      SocketInfo->Output->Read(SocketInfo->DataBuf.buf,ChunkSize);
       if(WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR){
         if(WSAGetLastError() != WSAEWOULDBLOCK){
           Log((AnsiString)"WSASend() failed with error "+WSAGetLastError());
           FreeSocketInfo(Socket);
+          return;
+        }
+        else{
+          Log("WSAEWOULDBLOCK");
+          SocketInfo->Output->Position = SocketInfo->Output->Position - ChunkSize;
           return;
         }
       }
@@ -328,6 +330,9 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
         delete SocketInfo->Output;
         SocketInfo->Output = NULL;  */
         SocketInfo->AllDoneNowMayClose = 1;
+        Log("******* AllDoneNowMayClose ***********");
+        // https://stackoverflow.com/questions/41855865/why-should-i-use-shutdown-before-closing-a-socket
+        shutdown(SocketInfo->Socket,SD_SEND);
         PostMessage(hWnd, wMsg, SocketInfo->Socket, FD_CLOSE);
       }
 
