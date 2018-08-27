@@ -38,6 +38,7 @@ AnsiString ppSimpleHttpClient::ExtractString1(AnsiString source,AnsiString start
 }
 //---------------------------------------------------------------------------
 __fastcall ppSimpleHttpClient::ppSimpleHttpClient(): TThread(1){
+  HeadersParsed = 0;
   FreeOnTerminate = 1;
   Output = NULL;
   Content = NULL;
@@ -219,36 +220,43 @@ void __fastcall ppSimpleHttpClient::Execute(){
       Log("HttpRequest sent.");
 
       // 4. Read response
+        const int buflen = 0x40000;
+        char buf[buflen];
 
       TMemoryStream * ms = new TMemoryStream();
       int iResult;
       do {
-        const int buflen = 0x400;
-        char buf[buflen];
 
         iResult = recv(Socket, buf, buflen, 0);
         if ( iResult > 0 ){
-          Log((AnsiString)"Bytes received: "+ iResult);
+          Log((AnsiString)"Bytes received: "+ iResult+" Size: "+ms->Size);
+          if(!HeadersParsed)
+            ParseHTTPHeaders(ms);
+          if((HeadersParsed)&&(ContentLength>0)){
+            ProgressPercent = 100*(ms->Size-ContentStart)/ContentLength;
+            Synchronize(Progress);
+          }
+
+
           ms->Write(buf,iResult);
         }
-        else if ( iResult == 0 )
-          Log("Connection closed");
-        else
-          Log((AnsiString)"recv failed with error: "+ WSAGetLastError());
+        else if ( iResult == 0 ){
+          Log((AnsiString)"Connection closed.");
+        }
+        else{
+          int Error = WSAGetLastError();
+          AnsiString ErrorST = Error;
+          if(Error == 10054)ErrorST = "Connection reset by peer";
+          Log((AnsiString)"recv failed with error: "+ErrorST);
+          break;
+        }
 
-      } while( iResult > 0 );
+      } while( iResult > 0);
       // 5. Parse result
-      TStringStream * ss = new TStringStream("");
-      ss->CopyFrom(ms,0);
-      if((ss->DataString.Pos("HTTP")==1)&&(ss->DataString.Pos("\r\n\r\n"))){
-        Log("Http headers found.");
-        Headers = ss->DataString.SubString(1,ss->DataString.Pos("\r\n\r\n")).Trim();
-        ContentType = ExtractString1(Headers,"Content-Type:","\r\n").Trim();
-        Log(Headers);
-        int contentStart = ss->DataString.Pos("\r\n\r\n")+3; //+4-1
-        Log((AnsiString)"ContentType "+ContentType);
-
-        ms->Position = contentStart;
+      if(!HeadersParsed)
+        ParseHTTPHeaders(ms);
+      if(HeadersParsed){
+        ms->Position = ContentStart;
         Output->CopyFrom(ms,ms->Size-ms->Position);
       }
       else{
@@ -256,7 +264,6 @@ void __fastcall ppSimpleHttpClient::Execute(){
 
         Output->CopyFrom(ms,0);
       }
-      delete ss;
       delete ms;
     }
     freeaddrinfo(result);
@@ -265,5 +272,21 @@ void __fastcall ppSimpleHttpClient::Execute(){
   WSACleanup();
   Log((AnsiString)"Thread ["+int(this)+"] finished.");
   Synchronize(DownloadReady);
+}
+//---------------------------------------------------------------------------
+void ppSimpleHttpClient::ParseHTTPHeaders(TStream * ms){
+  TStringStream * ss = new TStringStream("");
+  ss->CopyFrom(ms,0);
+  if((ss->DataString.Pos("HTTP")==1)&&(ss->DataString.Pos("\r\n\r\n"))){
+    Log("Http headers found.");
+    Headers = ss->DataString.SubString(1,ss->DataString.Pos("\r\n\r\n")).Trim();
+    ContentType = ExtractString1(Headers,"Content-Type:","\r\n").Trim();
+    ContentLength = ExtractString1(Headers,"Content-Length:","\r\n").Trim().ToIntDef(0);
+    int ContentStart = ss->DataString.Pos("\r\n\r\n")+3; //+4-1
+    Log((AnsiString)"ContentType "+ContentType);
+    Log((AnsiString)"ContentLength "+ContentLength);
+    HeadersParsed = 1;
+  }
+  delete ss;
 }
 //---------------------------------------------------------------------------
