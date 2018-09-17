@@ -1,11 +1,12 @@
 /*
-  class ppSimpleHttpServer v1.7
+  class ppSimpleHttpServer v1.8
 
   by Podoroges
   Kiev, Ukraine
 
 TODO: https://developer.mozilla.org/en-US/docs/Web/HTTP/Session
 
+  17/09/2018 v1.8 Removed winsock2.h from header to fight BCB6 packing bug.
   27/08/2018 v1.7 Proper WSAEWOULDBLOCK handling
   23/08/2018 v1.6 AllDoneNowMayClose added to reflect FD_CLOSE
   14/08/2018 v1.5 CSocketInfo::ClientIP added
@@ -70,7 +71,7 @@ void __fastcall TFMain::FormHide(TObject *Sender)
 */
 
 
-#include <winsock2.h>
+
 #include <classes.hpp>
 #include <vector>
 
@@ -81,10 +82,11 @@ class ppSimpleHttpServer{
     private:
     char * Buffer;
     int BufferSize;
-    WSABUF DataBuf;
-    SOCKET Socket;
+    unsigned long DataBuf_len;
+    char * DataBuf_buf;
+    int Socket;
     int Writable;
-    CSocketInfo(SOCKET s);
+    CSocketInfo(int s);
     ~CSocketInfo();
     AnsiString ParseMultipartFormData(int,AnsiString,AnsiString);
     public:
@@ -104,10 +106,10 @@ class ppSimpleHttpServer{
     AnsiString ExtractFormFileName(AnsiString);
     void ExtractFormFileAs(AnsiString,AnsiString);
   };
-  SOCKET Listen;
-  CSocketInfo * GetSocketInfo(SOCKET s);
-  void CreateSocketInfo(SOCKET s);
-  void FreeSocketInfo(SOCKET s);
+  int Listen;
+  CSocketInfo * GetSocketInfo(int s);
+  void CreateSocketInfo(int s);
+  void FreeSocketInfo(int s);
   HWND hWnd; // Window handle which will accept socket message
   unsigned int wMsg; // Message number
   std::vector <CSocketInfo *> Sockets;

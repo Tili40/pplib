@@ -1,3 +1,5 @@
+#include <winsock2.h>
+#pragma pack (8) // Dirty way to fight BCB6 W8059: Structure packing size has changed
 #include "ppSimpleHttpServer.h"
 
 #pragma link "ws2_32.lib"
@@ -69,7 +71,7 @@ int memsearch(char * buf,int buflen,int start,char * pattern,int patlen){
 //---------------------------------------------------------------------------
 //  ppSimpleHttpServer::CSocketInfo
 //---------------------------------------------------------------------------
-ppSimpleHttpServer::CSocketInfo::CSocketInfo(SOCKET s){
+ppSimpleHttpServer::CSocketInfo::CSocketInfo(int s){
   Socket = s;
   Writable = 0;
   ContentLength = 0;
@@ -148,7 +150,7 @@ void ppSimpleHttpServer::CSocketInfo::ExtractFormFileAs(AnsiString f1,AnsiString
   ParseMultipartFormData(2,f1,fname);
 }
 //---------------------------------------------------------------------------
-ppSimpleHttpServer::CSocketInfo * ppSimpleHttpServer::GetSocketInfo(SOCKET s){
+ppSimpleHttpServer::CSocketInfo * ppSimpleHttpServer::GetSocketInfo(int s){
   for(unsigned int a=0;a<Sockets.size();a++)
     if(Sockets[a]->Socket==s)
       return Sockets[a];
@@ -157,11 +159,11 @@ ppSimpleHttpServer::CSocketInfo * ppSimpleHttpServer::GetSocketInfo(SOCKET s){
 //---------------------------------------------------------------------------
 //  ppSimpleHttpServer
 //---------------------------------------------------------------------------
-void ppSimpleHttpServer::CreateSocketInfo(SOCKET s){
+void ppSimpleHttpServer::CreateSocketInfo(int s){
   Sockets.push_back(new CSocketInfo(s));
 }
 //---------------------------------------------------------------------------
-void ppSimpleHttpServer::FreeSocketInfo(SOCKET s){
+void ppSimpleHttpServer::FreeSocketInfo(int s){
   int Found = -1;
   for(unsigned int a=0;a<Sockets.size();a++)
     if(Sockets[a]->Socket==s)
@@ -278,11 +280,14 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
       Log("Closed socket on FD_READ");
       return;
     }
-    SocketInfo->DataBuf.buf = SocketInfo->Buffer;
-    SocketInfo->DataBuf.len = SocketInfo->BufferSize;
+    SocketInfo->DataBuf_buf = SocketInfo->Buffer;
+    SocketInfo->DataBuf_len = SocketInfo->BufferSize;
     DWORD Flags = 0;
     DWORD RecvBytes;
-    if(WSARecv(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &RecvBytes, &Flags, NULL, NULL) == SOCKET_ERROR){
+    WSABUF DataBuf;
+    DataBuf.len = SocketInfo->DataBuf_len;
+    DataBuf.buf = SocketInfo->DataBuf_buf;
+    if(WSARecv(SocketInfo->Socket, &(DataBuf), 1, &RecvBytes, &Flags, NULL, NULL) == SOCKET_ERROR){
       if(WSAGetLastError() != WSAEWOULDBLOCK){
         Log((AnsiString)"WSARecv() failed with error "+WSAGetLastError());
         FreeSocketInfo(Socket);
@@ -304,9 +309,12 @@ void ppSimpleHttpServer::HandleMessage(int Event,int Socket){
     if((SocketInfo->Output)&&(!SocketInfo->AllDoneNowMayClose)){
       //Log((AnsiString)"SocketInfo->Output->Size: "+SocketInfo->Output->Size+" Pos:"+SocketInfo->Output->Position);
       int ChunkSize = std::min(SocketInfo->Output->Size-SocketInfo->Output->Position,SocketInfo->BufferSize);
-      SocketInfo->DataBuf.len = ChunkSize;
-      SocketInfo->Output->Read(SocketInfo->DataBuf.buf,ChunkSize);
-      if(WSASend(SocketInfo->Socket, &(SocketInfo->DataBuf), 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR){
+      SocketInfo->DataBuf_len = ChunkSize;
+      SocketInfo->Output->Read(SocketInfo->DataBuf_buf,ChunkSize);
+      WSABUF DataBuf;
+      DataBuf.len = SocketInfo->DataBuf_len;
+      DataBuf.buf = SocketInfo->DataBuf_buf;
+      if(WSASend(SocketInfo->Socket, &DataBuf, 1, &SendBytes, 0, NULL, NULL) == SOCKET_ERROR){
         if(WSAGetLastError() != WSAEWOULDBLOCK){
           Log((AnsiString)"WSASend() failed with error "+WSAGetLastError());
           FreeSocketInfo(Socket);
@@ -397,6 +405,7 @@ ppSimpleHttpServer::~ppSimpleHttpServer(){
   WSACleanup();
 }
 //---------------------------------------------------------------------------
+
 
 
 
