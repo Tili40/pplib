@@ -9,6 +9,8 @@ ppInvertMatrix - Invert Square Matrix (not sure why one need it)
 
 ppLinearSolve - SSolve System of Linear Equations
 
+ppMimiz - Lame wrapper around miniz
+
 ppSimpleHttpClient - Yes we are trying to write our own Firefox
 
 ppSimpleHttpServer - Writing our own Apache
