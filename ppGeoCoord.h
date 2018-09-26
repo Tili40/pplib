@@ -1,10 +1,11 @@
 /*
-  class ppGeoCoord v1.1
+  class ppGeoCoord v1.2
   Convert Gauss-Krueger (GenShtab) into CK42, WGS84 and back
 
   by Podoroges
   Kiev, Ukraine
 
+  26/09/2018 v1.2 Added default values to pLat/pLon (50N24E)
   20/06/2018 v1.1 to/fromWGS84 and to/fromSK42bl added DMS versions
   15/06/2018 v1.0 Initial release
 

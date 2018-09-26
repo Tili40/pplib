@@ -131,6 +131,8 @@ ppGeoCoord::ppGeoCoord(){
   wy = 0;
   wz = 0;
   ms = 0;
+  pLat = 50;
+  pLon = 24;
 }
 
 // Input from SK42xy (Genstab)
