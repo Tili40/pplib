@@ -87,3 +87,8 @@ void ppSearchMemo::HighlightPart(int pos,int len,int cl){
   ReleaseDC(Handle, hdc); // done with dc
 }
 //------------------------------------------------------------------------------
+void __fastcall ppSearchMemo::Change(){
+  Search("");
+  Invalidate();
+}
+//------------------------------------------------------------------------------

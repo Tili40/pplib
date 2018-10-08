@@ -1,7 +1,12 @@
-
 /*
-  ppSearchMemo - TMemo descendant with search/highlighting for BCB 6.0 by Podoroges
-  v0.01 06/10/2018 - Start of the project
+  ppSearchMemo v1.1
+  TMemo descendant with search/highlighting for BCB 6.0 by Podoroges
+
+  by Podoroges
+  Kiev, Ukraine
+
+  v1.1 08/10/2018 - Corrected buggy behaviour when text edited during search.
+  v1.0 06/10/2018 - Start of the project
 
   Usage example:
 
@@ -48,12 +53,13 @@ class ppSearchMemo : public TMemo{
     VCL_MESSAGE_HANDLER(WM_PAINT, TWMPaint, Paint);
   END_MESSAGE_MAP(TMemo);
   void Paint(TWMPaint Event);
-  AnsiString SearchString;
+  DYNAMIC void __fastcall Change();
   std::vector <int> Position;
   void HighlightCancel();
   void Highlight();
   void HighlightPart(int pos,int len,int cl);
   public:
+  AnsiString SearchString;
   unsigned int SearchCurrent;
   unsigned int SearchCount;
   void Search(AnsiString st);
