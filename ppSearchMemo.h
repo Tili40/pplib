@@ -1,10 +1,11 @@
 /*
-  ppSearchMemo v1.1
+  ppSearchMemo v1.2
   TMemo descendant with search/highlighting for BCB 6.0 by Podoroges
 
   by Podoroges
   Kiev, Ukraine
 
+  v1.2 09/10/2018 - Corrected wrong array index in SearchNext.
   v1.1 08/10/2018 - Corrected buggy behaviour when text edited during search.
   v1.0 06/10/2018 - Start of the project
 
@@ -64,17 +65,8 @@ class ppSearchMemo : public TMemo{
   unsigned int SearchCount;
   void Search(AnsiString st);
   void SearchNext();
-  void SearchPrev(){
-    if(SearchCurrent>1){
-      SearchCurrent--;
-      SelStart = Position[SearchCurrent-1];
-      SelLength = 0;
-      Highlight();
-    }
-  }
-  AnsiString SearchPosition(){
-    return (AnsiString)SearchCurrent+"/"+SearchCount;
-  }
+  void SearchPrev();
+  AnsiString SearchPosition();
   __fastcall ppSearchMemo(Classes::TComponent*);
   __fastcall ~ppSearchMemo();
 };

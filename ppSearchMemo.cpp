@@ -28,12 +28,33 @@ void ppSearchMemo::Highlight(){
       (a+1==SearchCurrent?RGB(255,165,0):clYellow));
 }
 //------------------------------------------------------------------------------
+void ppSearchMemo::SearchPrev(){
+  if(SearchCurrent>1){
+    SearchCurrent--;
+    SelStart = Position[SearchCurrent-1];
+  }
+  else{
+    if(Position.size()>0){
+      SearchCurrent = SearchCount;
+      SelStart = Position[SearchCurrent-1];
+    }
+    else{
+      SelStart = 0;
+    }
+  }
+  SelLength = 0;
+  Highlight();
+}
+//------------------------------------------------------------------------------
 void ppSearchMemo::SearchNext(){
   if(SearchCurrent<SearchCount)
     SearchCurrent++;
   else
     SearchCurrent = 1;
-  SelStart = Position[SearchCurrent-1];
+  if((SearchCurrent-1>=0)&&(SearchCurrent-1<Position.size()))
+    SelStart = Position[SearchCurrent-1];
+  else
+    SelStart = 0;
   SelLength = 0;
   Highlight();
 }
@@ -90,5 +111,10 @@ void ppSearchMemo::HighlightPart(int pos,int len,int cl){
 void __fastcall ppSearchMemo::Change(){
   Search("");
   Invalidate();
+}
+//------------------------------------------------------------------------------
+AnsiString ppSearchMemo::SearchPosition(){
+  if(SearchCount<1)return "";
+  return (AnsiString)SearchCurrent+"/"+SearchCount;
 }
 //------------------------------------------------------------------------------
