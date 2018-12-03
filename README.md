@@ -11,6 +11,8 @@ ppLinearSolve - SSolve System of Linear Equations
 
 ppMimiz - Lame wrapper around miniz
 
+ppPointToSegment - Distance from point to segment of line.
+
 ppSimpleHttpClient - Yes we are trying to write our own Firefox
 
 ppSimpleHttpServer - Writing our own Apache
